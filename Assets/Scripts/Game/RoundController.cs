@@ -76,6 +76,7 @@ public class RoundController : MonoBehaviour
     public float SealedProgress => commitHold > 0f ? Mathf.Clamp01(sealedTimer / commitHold) : 0f;
     public bool GateSealed => gate != null && gate.AllFilled;
     public int GlimmersInPen => banked.Count;
+    public IReadOnlyList<GlimmerAgent> Agents => swarm != null ? swarm.Agents : null;
     public int GlimmersTotal => swarm != null ? swarm.Agents.Count : 0;
     public ScoreBreakdown LiveScore => liveScore;
     public RoundResult Result => result;
@@ -98,6 +99,11 @@ public class RoundController : MonoBehaviour
         }
 
         if (autoStart) StartRound();
+    }
+
+    public bool IsBanked(GlimmerAgent agent)
+    {
+        return agent != null && banked.Contains(agent);
     }
 
     public void SetTeamSize(int size)
