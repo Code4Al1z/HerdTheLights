@@ -341,8 +341,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2758e0c5800df014ca3c239328c2b699, type: 2}
   - {fileID: 11400000, guid: a1452c32d34272f45b78d82b5b3f0c54, type: 2}
   teamSize: 1
+  introDuration: 3
+  commitHold: 3
   autoStart: 1
-  showDebug: 1
+  showDebug: 0
 --- !u!4 &359264515
 Transform:
   m_ObjectHideFlags: 0
@@ -485,6 +487,79 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &503849805
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 503849808}
+  - component: {fileID: 503849807}
+  - component: {fileID: 503849806}
+  m_Layer: 0
+  m_Name: HUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &503849806
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 503849805}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7d6a8483162c94499e99d8751a3bea0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HudController
+  round: {fileID: 359264514}
+  document: {fileID: 0}
+  worldCamera: {fileID: 0}
+  popupLife: 1.1
+  popupRise: 80
+--- !u!114 &503849807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 503849805}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: e004468c49ed8d74fb4e19777e0adb5b, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 0}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &503849808
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 503849805}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -6, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &511393627
 GameObject:
   m_ObjectHideFlags: 0
@@ -519,17 +594,9 @@ MonoBehaviour:
   playerSourceBehaviour: {fileID: 299389772}
   pen: {fileID: 733720856}
   lure: {fileID: 931334581}
-  entries:
-  - archetype: {fileID: 11400000, guid: 01bc9bffba3b2724586be3b2c50c8d26, type: 2}
-    count: 8
-  - archetype: {fileID: 11400000, guid: 8b4b1ab4e0991a74290a8ee383dc500d, type: 2}
-    count: 4
-  - archetype: {fileID: 11400000, guid: f67dd0f10dda5c24f9094c70cbec6712, type: 2}
-    count: 3
   maxSwarm: 40
   spawnMargin: 2
   penClearance: 1
-  spawnOnStart: 1
 --- !u!4 &511393629
 Transform:
   m_ObjectHideFlags: 0
@@ -733,13 +800,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57267e29f74d447448a685f4a2dfa268, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScoreService
-  sealBonusFraction: 0.2
+  sealBonusPercent: 20
+  sweepBonusPercent: 20
   timeBonusPerSecond: 1
-  parTimeFraction: 0.25
-  gradeS: 0.95
-  gradeA: 0.8
-  gradeB: 0.6
-  gradeC: 0.4
+  parTimePercent: 25
+  gradeS: 95
+  gradeA: 80
+  gradeB: 60
+  gradeC: 40
 --- !u!4 &781451094
 Transform:
   m_ObjectHideFlags: 0
@@ -973,3 +1041,4 @@ SceneRoots:
   - {fileID: 931334582}
   - {fileID: 359264515}
   - {fileID: 781451094}
+  - {fileID: 503849808}
