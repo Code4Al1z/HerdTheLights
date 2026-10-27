@@ -680,6 +680,10 @@ MonoBehaviour:
   size: {x: 4, y: 6}
   gateSide: 1
   gateWidth: 3
+  wallMaterial: {fileID: 0}
+  wallColor: {r: 0.014517871, g: 0.97735846, b: 0, a: 1}
+  wallThickness: 0.15
+  wallEmission: 2
 --- !u!4 &733720857
 Transform:
   m_ObjectHideFlags: 0

@@ -13,6 +13,13 @@ public class PenZone : MonoBehaviour
     [SerializeField] private Vector2 size = new Vector2(4f, 6f);
     [SerializeField] private GateSide gateSide = GateSide.Right;
     [SerializeField] private float gateWidth = 3f;
+    [SerializeField] private Material wallMaterial;
+    [SerializeField] private Color wallColor = new Color(0.4f, 0.9f, 1f);
+    [SerializeField] private float wallThickness = 0.15f;
+    [SerializeField] private float wallEmission = 2f;
+
+    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+    private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
     private IGateState gate;
 
@@ -23,6 +30,11 @@ public class PenZone : MonoBehaviour
     public Vector3 GateAxis => IsVertical(gateSide) ? Vector3.forward : Vector3.right;
     public float GateLength => Mathf.Min(gateWidth, SideLength(gateSide));
     public Vector3 GateCenter => Center + Outward(gateSide) * HalfExtentTowards(gateSide);
+
+    private void Start()
+    {
+        BuildWalls();
+    }
 
     public void AttachGate(IGateState state)
     {
@@ -99,6 +111,58 @@ public class PenZone : MonoBehaviour
 
         blockedNormal = Outward(bestSide);
         return from;
+    }
+
+    private void BuildWalls()
+    {
+        if (wallMaterial == null) return;
+
+        Vector2 half = size * 0.5f;
+        Vector3 c = Center;
+        Vector3 bottomLeft = c + new Vector3(-half.x, 0f, -half.y);
+        Vector3 bottomRight = c + new Vector3(half.x, 0f, -half.y);
+        Vector3 topRight = c + new Vector3(half.x, 0f, half.y);
+        Vector3 topLeft = c + new Vector3(-half.x, 0f, half.y);
+        BuildSide(bottomLeft, bottomRight, GateSide.Bottom);
+        BuildSide(bottomRight, topRight, GateSide.Right);
+        BuildSide(topLeft, topRight, GateSide.Top);
+        BuildSide(bottomLeft, topLeft, GateSide.Left);
+    }
+
+    private void BuildSide(Vector3 a, Vector3 b, GateSide side)
+    {
+        if (side != gateSide)
+        {
+            BuildSegment(a, b);
+            return;
+        }
+
+        Vector3 direction = (b - a).normalized;
+        Vector3 middle = (a + b) * 0.5f;
+        float reach = GateLength * 0.5f;
+        BuildSegment(a, middle - direction * reach);
+        BuildSegment(middle + direction * reach, b);
+    }
+
+    private void BuildSegment(Vector3 a, Vector3 b)
+    {
+        float length = Vector3.Distance(a, b);
+        if (length < 0.01f) return;
+
+        GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Destroy(wall.GetComponent<Collider>());
+        wall.name = "Wall";
+        wall.transform.SetParent(transform, true);
+        wall.transform.position = (a + b) * 0.5f;
+        wall.transform.rotation = Quaternion.LookRotation(b - a);
+        wall.transform.localScale = new Vector3(wallThickness, wallThickness, length);
+
+        Renderer wallRenderer = wall.GetComponent<Renderer>();
+        wallRenderer.sharedMaterial = wallMaterial;
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        block.SetColor(BaseColorId, wallColor);
+        block.SetColor(EmissionColorId, wallColor * wallEmission);
+        wallRenderer.SetPropertyBlock(block);
     }
 
     private static bool IsVertical(GateSide side)

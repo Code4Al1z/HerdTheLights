@@ -67,7 +67,8 @@ public class GlimmerAgent : MonoBehaviour
 
         wanderAngle += (Random.value - 0.5f) * 2f * archetype.WanderJitter * dt;
         Vector3 wander = new Vector3(Mathf.Cos(wanderAngle), 0f, Mathf.Sin(wanderAngle));
-        Vector3 edge = archetype.EdgeDriftWeight > 0f ? mapper.NearestEdgeDirection(position) : Vector3.zero;
+        bool lured = lure.sqrMagnitude > 0f;
+        Vector3 edge = archetype.EdgeDriftWeight > 0f && !lured ? mapper.NearestEdgeDirection(position) : Vector3.zero;
         Vector3 wall = mapper.InwardPush(position, archetype.WallMargin);
 
         float boost = Panicking ? archetype.PanicSpeedBoost : 1f;
