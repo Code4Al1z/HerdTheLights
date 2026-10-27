@@ -1,0 +1,164 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public enum GateSide { Left, Right, Bottom, Top }
+
+public interface IGateState
+{
+    bool IsOpenAt(Vector3 point);
+}
+
+public class PenZone : MonoBehaviour
+{
+    [SerializeField] private Vector2 size = new Vector2(4f, 6f);
+    [SerializeField] private GateSide gateSide = GateSide.Right;
+    [SerializeField] private float gateWidth = 3f;
+
+    private IGateState gate;
+
+    public Vector3 Center => transform.position;
+    public Vector2 Size => size;
+    public GateSide Side => gateSide;
+    public Vector3 GateOutward => Outward(gateSide);
+    public Vector3 GateAxis => IsVertical(gateSide) ? Vector3.forward : Vector3.right;
+    public float GateLength => Mathf.Min(gateWidth, SideLength(gateSide));
+    public Vector3 GateCenter => Center + Outward(gateSide) * HalfExtentTowards(gateSide);
+
+    public void AttachGate(IGateState state)
+    {
+        gate = state;
+    }
+
+    public bool Contains(Vector3 point)
+    {
+        return Contains(point, 0f);
+    }
+
+    public bool Contains(Vector3 point, float padding)
+    {
+        Vector3 local = point - Center;
+        return Mathf.Abs(local.x) <= size.x * 0.5f + padding && Mathf.Abs(local.z) <= size.y * 0.5f + padding;
+    }
+
+    public int CountInside(IReadOnlyList<GlimmerAgent> agents)
+    {
+        int count = 0;
+        for (int i = 0; i < agents.Count; i++)
+        {
+            if (agents[i] != null && Contains(agents[i].transform.position)) count++;
+        }
+        return count;
+    }
+
+    public Vector3 Constrain(Vector3 from, Vector3 to, out Vector3 blockedNormal)
+    {
+        blockedNormal = Vector3.zero;
+        if (Contains(from) == Contains(to)) return to;
+
+        Vector3 start = from - Center;
+        Vector3 delta = to - from;
+        Vector2 half = size * 0.5f;
+        float bestT = float.MaxValue;
+        GateSide bestSide = GateSide.Left;
+        Vector3 bestPoint = Vector3.zero;
+        bool found = false;
+
+        for (int i = 0; i < 4; i++)
+        {
+            GateSide side = (GateSide)i;
+            Vector3 outward = Outward(side);
+            bool vertical = IsVertical(side);
+            float plane = vertical ? outward.x * half.x : outward.z * half.y;
+            float origin = vertical ? start.x : start.z;
+            float step = vertical ? delta.x : delta.z;
+            if (Mathf.Abs(step) < 0.00001f) continue;
+
+            float t = (plane - origin) / step;
+            if (t < 0f || t > 1f || t >= bestT) continue;
+
+            Vector3 hit = start + delta * t;
+            float across = vertical ? hit.z : hit.x;
+            float acrossHalf = vertical ? half.y : half.x;
+            if (Mathf.Abs(across) > acrossHalf + 0.0001f) continue;
+
+            bestT = t;
+            bestSide = side;
+            bestPoint = Center + hit;
+            found = true;
+        }
+
+        if (!found) return to;
+
+        if (bestSide == gateSide)
+        {
+            float along = Vector3.Dot(bestPoint - GateCenter, GateAxis);
+            bool inSpan = Mathf.Abs(along) <= GateLength * 0.5f;
+            bool open = gate == null || gate.IsOpenAt(bestPoint);
+            if (inSpan && open) return to;
+        }
+
+        blockedNormal = Outward(bestSide);
+        return from;
+    }
+
+    private static bool IsVertical(GateSide side)
+    {
+        return side == GateSide.Left || side == GateSide.Right;
+    }
+
+    private static Vector3 Outward(GateSide side)
+    {
+        switch (side)
+        {
+            case GateSide.Left: return Vector3.left;
+            case GateSide.Right: return Vector3.right;
+            case GateSide.Top: return Vector3.forward;
+            default: return Vector3.back;
+        }
+    }
+
+    private float SideLength(GateSide side)
+    {
+        return IsVertical(side) ? size.y : size.x;
+    }
+
+    private float HalfExtentTowards(GateSide side)
+    {
+        return IsVertical(side) ? size.x * 0.5f : size.y * 0.5f;
+    }
+
+    private void DrawSide(Vector3 a, Vector3 b, GateSide side)
+    {
+        Color wall = new Color(0.4f, 0.9f, 1f);
+        Color opening = new Color(1f, 0.8f, 0.2f);
+        if (side != gateSide)
+        {
+            Gizmos.color = wall;
+            Gizmos.DrawLine(a, b);
+            return;
+        }
+
+        Vector3 direction = (b - a).normalized;
+        Vector3 middle = (a + b) * 0.5f;
+        float reach = GateLength * 0.5f;
+        Gizmos.color = wall;
+        Gizmos.DrawLine(a, middle - direction * reach);
+        Gizmos.DrawLine(middle + direction * reach, b);
+        Gizmos.color = opening;
+        Gizmos.DrawLine(middle - direction * reach, middle + direction * reach);
+    }
+
+    private void OnDrawGizmos()
+    {
+        Vector2 half = size * 0.5f;
+        Vector3 c = Center;
+        Vector3 bottomLeft = c + new Vector3(-half.x, 0f, -half.y);
+        Vector3 bottomRight = c + new Vector3(half.x, 0f, -half.y);
+        Vector3 topRight = c + new Vector3(half.x, 0f, half.y);
+        Vector3 topLeft = c + new Vector3(-half.x, 0f, half.y);
+        DrawSide(bottomLeft, bottomRight, GateSide.Bottom);
+        DrawSide(bottomRight, topRight, GateSide.Right);
+        DrawSide(topLeft, topRight, GateSide.Top);
+        DrawSide(bottomLeft, topLeft, GateSide.Left);
+    }
+}

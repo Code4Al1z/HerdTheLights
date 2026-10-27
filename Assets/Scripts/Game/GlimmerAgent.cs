@@ -62,6 +62,7 @@ public class GlimmerAgent : MonoBehaviour
         Vector3 position = transform.position;
 
         Vector3 flee = ComputeFlee(position);
+        Vector3 lure = ComputeLure(position);
         ComputeFlock(position, out Vector3 cohesion, out Vector3 separation, out Vector3 panicAway);
 
         wanderAngle += (Random.value - 0.5f) * 2f * archetype.WanderJitter * dt;
@@ -80,12 +81,18 @@ public class GlimmerAgent : MonoBehaviour
 
         Vector3 desired = flee * (archetype.FleeStrength * archetype.FleeSpeed * boost)
             + panicAway * (archetype.FleeSpeed * boost * panicScale)
-            + cruise * archetype.CruiseSpeed;
+            + cruise * archetype.CruiseSpeed
+            + lure;
 
         desired = Vector3.ClampMagnitude(desired, archetype.MaxSpeed * boost);
         velocity = Vector3.MoveTowards(velocity, desired, archetype.Acceleration * dt);
-        position += velocity * dt;
-        transform.position = mapper.Clamp(position, HardMargin);
+
+        Vector3 next = mapper.Clamp(position + velocity * dt, HardMargin);
+        Vector3 blocked = Vector3.zero;
+        if (swarm.Pen != null) next = swarm.Pen.Constrain(position, next, out blocked);
+        if (blocked != Vector3.zero) velocity -= blocked * Vector3.Dot(velocity, blocked);
+
+        transform.position = next;
     }
 
     private Vector3 ComputeFlee(Vector3 position)
@@ -107,6 +114,20 @@ public class GlimmerAgent : MonoBehaviour
         }
 
         return sum;
+    }
+
+    private Vector3 ComputeLure(Vector3 position)
+    {
+        LureController lure = swarm.Lure;
+        if (lure == null || !lure.Active || archetype.LureSpeed <= 0f) return Vector3.zero;
+
+        Vector3 offset = lure.Position - position;
+        offset.y = 0f;
+        float distance = offset.magnitude;
+        if (distance > lure.Radius || distance < 0.0001f) return Vector3.zero;
+
+        float arrive = Mathf.Clamp01(distance - archetype.SeparationRadius);
+        return offset / distance * (arrive * archetype.LureSpeed);
     }
 
     private void ComputeFlock(Vector3 position, out Vector3 cohesion, out Vector3 separation, out Vector3 panicAway)

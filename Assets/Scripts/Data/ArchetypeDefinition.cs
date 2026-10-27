@@ -16,6 +16,7 @@ public class ArchetypeDefinition : ScriptableObject
     [field: SerializeField] public float MaxSpeed { get; private set; } = 3.5f;
     [field: SerializeField] public float Acceleration { get; private set; } = 8f;
     [field: SerializeField] public float CruiseSpeed { get; private set; } = 1f;
+    [field: SerializeField] public float LureSpeed { get; private set; } = 3f;
 
     [field: SerializeField] public float NeighborRadius { get; private set; } = 4f;
     [field: SerializeField] public float SeparationRadius { get; private set; } = 0.8f;

@@ -18,18 +18,15 @@ public class MousePlayerSource : MonoBehaviour, IPlayerSource
     private void Awake()
     {
         if (viewCamera == null) viewCamera = Camera.main;
+        if (mapper == null) Debug.LogError("MousePlayerSource needs a playfield mapper.", this);
     }
 
     private void Update()
     {
         Mouse mouse = Mouse.current;
-        if (mouse == null || viewCamera == null || mapper == null) return;
+        if (mouse == null || mapper == null) return;
 
-        Ray ray = viewCamera.ScreenPointToRay(mouse.position.ReadValue());
-        Plane plane = new Plane(Vector3.up, mapper.Center);
-        if (!plane.Raycast(ray, out float distance)) return;
-
-        Vector2 n = mapper.WorldToNormalized(ray.GetPoint(distance));
-        normalized = new Vector2(Mathf.Clamp01(n.x), Mathf.Clamp01(n.y));
+        if (mapper.TryScreenToNormalized(viewCamera, mouse.position.ReadValue(), out Vector2 n))
+            normalized = n;
     }
 }

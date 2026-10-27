@@ -39,6 +39,20 @@ public class PlayfieldMapper : MonoBehaviour
             (world.z - Center.z) / size.y + 0.5f);
     }
 
+    public bool TryScreenToNormalized(Camera camera, Vector2 screenPoint, out Vector2 normalized)
+    {
+        normalized = Vector2.zero;
+        if (camera == null) return false;
+
+        Ray ray = camera.ScreenPointToRay(screenPoint);
+        Plane plane = new Plane(Vector3.up, Center);
+        if (!plane.Raycast(ray, out float distance)) return false;
+
+        Vector2 n = WorldToNormalized(ray.GetPoint(distance));
+        normalized = new Vector2(Mathf.Clamp01(n.x), Mathf.Clamp01(n.y));
+        return true;
+    }
+
     public Vector3 Clamp(Vector3 world, float margin)
     {
         Vector2 half = size * 0.5f - new Vector2(margin, margin);

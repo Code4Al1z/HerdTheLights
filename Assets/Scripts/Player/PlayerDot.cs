@@ -14,6 +14,8 @@ public class PlayerDot : MonoBehaviour
     {
         source = playerSourceBehaviour as IPlayerSource;
         if (dotRenderer == null) dotRenderer = GetComponentInChildren<Renderer>();
+        if (source == null || mapper == null)
+            Debug.LogError("PlayerDot needs a playfield mapper and a player source.", this);
     }
 
     private void Update()
