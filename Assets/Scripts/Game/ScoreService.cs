@@ -6,6 +6,7 @@ public struct ScoreBreakdown
     public int basePoints;
     public int maxBasePoints;
     public int sealBonus;
+    public int sweepBonus;
     public int timeBonus;
     public int total;
     public char grade;
@@ -14,15 +15,16 @@ public struct ScoreBreakdown
 
 public class ScoreService : MonoBehaviour
 {
-    [SerializeField] private float sealBonusFraction = 0.2f;
-    [SerializeField] private float timeBonusPerSecond = 1f;
-    [SerializeField] private float parTimeFraction = 0.25f;
-    [SerializeField] private float gradeS = 0.95f;
-    [SerializeField] private float gradeA = 0.8f;
-    [SerializeField] private float gradeB = 0.6f;
-    [SerializeField] private float gradeC = 0.4f;
+    [SerializeField] private int sealBonusPercent = 20;
+    [SerializeField] private int sweepBonusPercent = 20;
+    [SerializeField] private int timeBonusPerSecond = 1;
+    [SerializeField] private int parTimePercent = 25;
+    [SerializeField] private int gradeS = 95;
+    [SerializeField] private int gradeA = 80;
+    [SerializeField] private int gradeB = 60;
+    [SerializeField] private int gradeC = 40;
 
-    public ScoreBreakdown Evaluate(IReadOnlyList<GlimmerAgent> agents, PenZone pen, bool gateSealed, float timeLeft, float roundDuration)
+    public ScoreBreakdown Evaluate(IReadOnlyList<GlimmerAgent> agents, PenZone pen, bool gateSealed, bool endedEarly, int secondsLeft, int roundSeconds)
     {
         ScoreBreakdown result = new ScoreBreakdown();
         int inPen = 0;
@@ -40,20 +42,26 @@ public class ScoreService : MonoBehaviour
         }
 
         result.allIn = agents.Count > 0 && inPen == agents.Count;
-        if (result.allIn && gateSealed) result.sealBonus = Mathf.RoundToInt(result.basePoints * sealBonusFraction);
-        if (result.allIn && gateSealed && timeLeft > 0f) result.timeBonus = Mathf.FloorToInt(timeLeft * timeBonusPerSecond);
+        if (gateSealed) result.sealBonus = Percent(result.basePoints, sealBonusPercent);
+        if (gateSealed && result.allIn) result.sweepBonus = Percent(result.basePoints, sweepBonusPercent);
+        if (gateSealed && endedEarly) result.timeBonus = Mathf.Max(0, secondsLeft) * timeBonusPerSecond;
 
-        result.total = result.basePoints + result.sealBonus + result.timeBonus;
-        result.grade = GradeFor(result.total, result.maxBasePoints, roundDuration);
+        result.total = result.basePoints + result.sealBonus + result.sweepBonus + result.timeBonus;
+        result.grade = GradeFor(result.total, result.maxBasePoints, roundSeconds);
         return result;
     }
 
-    private char GradeFor(int total, int maxBasePoints, float roundDuration)
+    private static int Percent(int value, int percent)
     {
-        float par = maxBasePoints * (1f + sealBonusFraction) + timeBonusPerSecond * roundDuration * parTimeFraction;
-        if (par <= 0f) return 'D';
+        return (value * percent + 50) / 100;
+    }
 
-        float ratio = total / par;
+    private char GradeFor(int total, int maxBasePoints, int roundSeconds)
+    {
+        int par = Percent(maxBasePoints, 100 + sealBonusPercent + sweepBonusPercent) + timeBonusPerSecond * roundSeconds * parTimePercent / 100;
+        if (par <= 0) return 'D';
+
+        int ratio = total * 100 / par;
         if (ratio >= gradeS) return 'S';
         if (ratio >= gradeA) return 'A';
         if (ratio >= gradeB) return 'B';

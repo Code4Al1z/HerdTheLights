@@ -27,6 +27,7 @@ public class RoundController : MonoBehaviour
     [SerializeField] private TeamSizeConfig teamConfig;
     [SerializeField] private List<RoundDefinition> rounds = new List<RoundDefinition>();
     [SerializeField] private int teamSize = 1;
+    [SerializeField] private float commitHold = 3f;
     [SerializeField] private bool autoStart = true;
     [SerializeField] private bool showDebug = true;
 
@@ -37,6 +38,7 @@ public class RoundController : MonoBehaviour
     private float sealWindow;
     private float timeLeft;
     private float elapsed;
+    private float sealedTimer;
     private RoundResult result;
     private LeaderboardStore leaderboard;
     private GUIStyle style;
@@ -89,6 +91,7 @@ public class RoundController : MonoBehaviour
         sealWindow = round.SealWindow;
         timeLeft = roundDuration;
         elapsed = 0f;
+        sealedTimer = 0f;
         SetPhase(RoundPhase.Herd);
     }
 
@@ -122,15 +125,17 @@ public class RoundController : MonoBehaviour
             SetPhase(RoundPhase.Seal);
         }
 
-        if (phase == RoundPhase.Seal && ((allIn && gate.AllFilled) || timeLeft <= 0f))
+        if (phase == RoundPhase.Seal)
         {
-            EndRound(total);
+            sealedTimer = gate.AllFilled ? sealedTimer + Time.deltaTime : 0f;
+            bool committed = gate.AllFilled && (allIn || sealedTimer >= commitHold);
+            if (committed || timeLeft <= 0f) EndRound(total);
         }
     }
 
     private void EndRound(int total)
     {
-        ScoreBreakdown breakdown = scoreService.Evaluate(swarm.Agents, pen, gate.AllFilled, timeLeft, roundDuration);
+        ScoreBreakdown breakdown = scoreService.Evaluate(swarm.Agents, pen, gate.AllFilled, timeLeft > 0f, Mathf.FloorToInt(timeLeft), Mathf.RoundToInt(roundDuration));
         int rank = leaderboard.Submit(teamSize, breakdown.total, elapsed);
 
         result = new RoundResult
@@ -162,6 +167,9 @@ public class RoundController : MonoBehaviour
 
         string text = $"Round {roundIndex + 1}: {round.DisplayName} (team of {teamSize})\nPhase: {phase}\nTime left: {timeLeft:F1}s\nIn pen: {pen.CountInside(swarm.Agents)} / {swarm.Agents.Count}\nSlots filled: {gate.FilledCount} / {gate.SlotCount}";
 
+        if (phase == RoundPhase.Seal && gate.AllFilled)
+            text += $"\nSealed, holding {Mathf.Min(sealedTimer, commitHold):F1} / {commitHold:F0}s";
+
         LureController lure = swarm.Lure;
         if (lure != null)
             text += lure.Ready ? "\nLure: ready" : $"\nLure: {lure.CooldownRemaining:F1}s";
@@ -169,7 +177,8 @@ public class RoundController : MonoBehaviour
         if (phase == RoundPhase.Result)
         {
             ScoreBreakdown s = result.score;
-            text += $"\nScore: {s.total} (grade {s.grade}) = {s.basePoints} + seal {s.sealBonus} + time {s.timeBonus}";
+            text += $"\nScore: {s.total} (grade {s.grade}) = {s.basePoints} + seal {s.sealBonus} + sweep {s.sweepBonus} + time {s.timeBonus}";
+            text += $"\nAll in: {(s.allIn ? "yes" : "no")}, gate sealed: {(result.gateSealed ? "yes" : "no")} (seal needs a closed gate, sweep needs everything in)";
             text += result.rank > 0 ? $"\nRank: #{result.rank}" : "\nRank: outside the top 10";
 
             IReadOnlyList<LeaderboardStore.Entry> top = leaderboard.GetTop(teamSize);
