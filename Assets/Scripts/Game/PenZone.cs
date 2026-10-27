@@ -62,55 +62,62 @@ public class PenZone : MonoBehaviour
         return count;
     }
 
-    public Vector3 Constrain(Vector3 from, Vector3 to, out Vector3 blockedNormal)
+    public Vector3 Constrain(Vector3 from, Vector3 to, float bodyRadius, out Vector3 blockedAxes)
     {
-        blockedNormal = Vector3.zero;
-        if (Contains(from) == Contains(to)) return to;
+        blockedAxes = Vector3.zero;
+        float clearance = bodyRadius + wallThickness * 0.5f;
+        bool inside = Contains(from);
 
-        Vector3 start = from - Center;
-        Vector3 delta = to - from;
+        if (!Allowed(from, inside, clearance)) from = Eject(from, inside, clearance);
+
+        Vector3 result = from;
+        Vector3 stepX = new Vector3(to.x, to.y, result.z);
+        if (Allowed(stepX, inside, clearance)) result = stepX;
+        else if (Mathf.Abs(to.x - from.x) > 0f) blockedAxes.x = 1f;
+
+        Vector3 stepZ = new Vector3(result.x, to.y, to.z);
+        if (Allowed(stepZ, inside, clearance)) result = stepZ;
+        else if (Mathf.Abs(to.z - from.z) > 0f) blockedAxes.z = 1f;
+
+        return result;
+    }
+
+    private bool Allowed(Vector3 point, bool inside, float clearance)
+    {
+        if (InCorridor(point, clearance)) return true;
+        return inside ? Contains(point, -clearance) : !Contains(point, clearance);
+    }
+
+    private bool InCorridor(Vector3 point, float clearance)
+    {
+        Vector3 relative = point - GateCenter;
+        float along = Vector3.Dot(relative, GateAxis);
+        float depth = Vector3.Dot(relative, GateOutward);
+        if (Mathf.Abs(along) > GateLength * 0.5f - clearance || Mathf.Abs(depth) > clearance) return false;
+        return gate == null || gate.IsOpenAt(point);
+    }
+
+    private Vector3 Eject(Vector3 point, bool inside, float clearance)
+    {
         Vector2 half = size * 0.5f;
-        float bestT = float.MaxValue;
-        GateSide bestSide = GateSide.Left;
-        Vector3 bestPoint = Vector3.zero;
-        bool found = false;
+        Vector3 relative = point - Center;
 
-        for (int i = 0; i < 4; i++)
+        if (inside)
         {
-            GateSide side = (GateSide)i;
-            Vector3 outward = Outward(side);
-            bool vertical = IsVertical(side);
-            float plane = vertical ? outward.x * half.x : outward.z * half.y;
-            float origin = vertical ? start.x : start.z;
-            float step = vertical ? delta.x : delta.z;
-            if (Mathf.Abs(step) < 0.00001f) continue;
-
-            float t = (plane - origin) / step;
-            if (t < 0f || t > 1f || t >= bestT) continue;
-
-            Vector3 hit = start + delta * t;
-            float across = vertical ? hit.z : hit.x;
-            float acrossHalf = vertical ? half.y : half.x;
-            if (Mathf.Abs(across) > acrossHalf + 0.0001f) continue;
-
-            bestT = t;
-            bestSide = side;
-            bestPoint = Center + hit;
-            found = true;
+            Vector2 limit = half - new Vector2(clearance, clearance);
+            return new Vector3(
+                Center.x + Mathf.Clamp(relative.x, -limit.x, limit.x),
+                point.y,
+                Center.z + Mathf.Clamp(relative.z, -limit.y, limit.y));
         }
 
-        if (!found) return to;
-
-        if (bestSide == gateSide)
-        {
-            float along = Vector3.Dot(bestPoint - GateCenter, GateAxis);
-            bool inSpan = Mathf.Abs(along) <= GateLength * 0.5f;
-            bool open = gate == null || gate.IsOpenAt(bestPoint);
-            if (inSpan && open) return to;
-        }
-
-        blockedNormal = Outward(bestSide);
-        return from;
+        Vector2 outer = half + new Vector2(clearance, clearance);
+        float gapX = outer.x - Mathf.Abs(relative.x);
+        float gapZ = outer.y - Mathf.Abs(relative.z);
+        Vector3 result = point;
+        if (gapX < gapZ) result.x = Center.x + (relative.x < 0f ? -outer.x : outer.x);
+        else result.z = Center.z + (relative.z < 0f ? -outer.y : outer.y);
+        return result;
     }
 
     private void BuildWalls()

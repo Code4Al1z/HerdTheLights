@@ -4,7 +4,6 @@ public class GlimmerAgent : MonoBehaviour
 {
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
-    private const float HardMargin = 0.2f;
     private const float WallPush = 2f;
 
     [SerializeField] private Renderer glowRenderer;
@@ -18,6 +17,7 @@ public class GlimmerAgent : MonoBehaviour
     private Vector3 velocity;
     private float wanderAngle;
     private float panicTimer;
+    private float bodyRadius = 0.25f;
 
     public ArchetypeDefinition Archetype => archetype;
     public Vector3 Velocity => velocity;
@@ -45,6 +45,7 @@ public class GlimmerAgent : MonoBehaviour
         transform.localScale = Vector3.one * archetype.Scale;
         if (meshFilter != null && archetype.Mesh != null) meshFilter.sharedMesh = archetype.Mesh;
         if (glowRenderer == null) return;
+        bodyRadius = glowRenderer.bounds.extents.x;
 
         if (block == null) block = new MaterialPropertyBlock();
         glowRenderer.GetPropertyBlock(block);
@@ -88,10 +89,11 @@ public class GlimmerAgent : MonoBehaviour
         desired = Vector3.ClampMagnitude(desired, archetype.MaxSpeed * boost);
         velocity = Vector3.MoveTowards(velocity, desired, archetype.Acceleration * dt);
 
-        Vector3 next = mapper.Clamp(position + velocity * dt, HardMargin);
+        Vector3 next = mapper.Clamp(position + velocity * dt, bodyRadius);
         Vector3 blocked = Vector3.zero;
-        if (swarm.Pen != null) next = swarm.Pen.Constrain(position, next, out blocked);
-        if (blocked != Vector3.zero) velocity -= blocked * Vector3.Dot(velocity, blocked);
+        if (swarm.Pen != null) next = swarm.Pen.Constrain(position, next, bodyRadius, out blocked);
+        if (blocked.x > 0f) velocity.x = 0f;
+        if (blocked.z > 0f) velocity.z = 0f;
 
         transform.position = next;
     }

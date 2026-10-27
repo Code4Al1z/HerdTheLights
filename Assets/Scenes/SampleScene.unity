@@ -201,8 +201,8 @@ Camera:
   m_GameObject: {fileID: 330585543}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -680,7 +680,7 @@ MonoBehaviour:
   size: {x: 4, y: 6}
   gateSide: 1
   gateWidth: 3
-  wallMaterial: {fileID: 0}
+  wallMaterial: {fileID: 2100000, guid: 05dce3b6ab592f440a7e97ea9e4229fc, type: 2}
   wallColor: {r: 0.014517871, g: 0.97735846, b: 0, a: 1}
   wallThickness: 0.15
   wallEmission: 2
