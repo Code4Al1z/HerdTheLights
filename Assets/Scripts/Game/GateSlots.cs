@@ -11,7 +11,7 @@ public class GateSlots : MonoBehaviour, IGateState
     [SerializeField] private int slotCount = 1;
     [SerializeField] private float standDepth = 1.2f;
     [SerializeField] private GameObject markerPrefab;
-    [SerializeField] private float markerScale = 1.5f;
+    [SerializeField, Range(0.2f, 1f)] private float markerFill = 0.9f;
     [SerializeField] private Color idleColor = new Color(0.5f, 0.5f, 0.6f);
     [SerializeField] private Color emptyColor = new Color(1f, 0.45f, 0.1f);
     [SerializeField] private Color filledColor = new Color(0.2f, 1f, 0.5f);
@@ -102,8 +102,13 @@ public class GateSlots : MonoBehaviour, IGateState
         for (int i = 0; i < slotCount; i++)
         {
             GameObject marker = Instantiate(markerPrefab, SlotCenter(i), Quaternion.identity, transform);
-            marker.transform.localScale = Vector3.one * markerScale;
-            markerRenderers[i] = marker.GetComponentInChildren<Renderer>();
+            Renderer markerRenderer = marker.GetComponentInChildren<Renderer>();
+            markerRenderers[i] = markerRenderer;
+            if (markerRenderer == null || markerRenderer.bounds.size.x < 0.0001f) continue;
+
+            float factor = SlotWidth * markerFill / markerRenderer.bounds.size.x;
+            Vector3 baseScale = marker.transform.localScale;
+            marker.transform.localScale = new Vector3(baseScale.x * factor, baseScale.y, baseScale.z * factor);
         }
     }
 
