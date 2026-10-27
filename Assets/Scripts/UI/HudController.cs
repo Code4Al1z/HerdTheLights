@@ -41,6 +41,8 @@ public class HudController : MonoBehaviour
     private Label breakdownLabel;
     private Label rankLabel;
     private Label hintLabel;
+    private Label runLabel;
+    private Label boardLabel;
     private int lastScore;
     private float punch;
     private bool ready;
@@ -137,9 +139,12 @@ public class HudController : MonoBehaviour
         totalLabel = MakeLabel(resultCard, 80, Color.white);
         breakdownLabel = MakeLabel(resultCard, 32, new Color(0.75f, 0.9f, 0.95f), false);
         rankLabel = MakeLabel(resultCard, 36, Gold);
+        runLabel = MakeLabel(resultCard, 40, Cyan);
+        runLabel.style.marginTop = 10;
+        boardLabel = MakeLabel(resultCard, 26, new Color(0.75f, 0.9f, 0.95f), false);
+        boardLabel.style.marginTop = 14;
         hintLabel = MakeLabel(resultCard, 28, new Color(0.7f, 0.8f, 0.85f), false);
         hintLabel.style.marginTop = 16;
-        hintLabel.text = "R: replay      N: next round";
     }
 
     private void Update()
@@ -234,7 +239,35 @@ public class HudController : MonoBehaviour
         gradeLabel.style.color = GradeColor(s.grade);
         totalLabel.text = s.total.ToString();
         breakdownLabel.text = $"{s.basePoints} base   +{s.sealBonus} seal   +{s.sweepBonus} sweep   +{s.timeBonus} time";
-        rankLabel.text = r.rank > 0 ? $"RANK #{r.rank}" : "OUTSIDE THE TOP 10";
+        rankLabel.text = r.rank > 0 ? $"ROUND {r.roundIndex + 1} RANK #{r.rank}" : $"ROUND {r.roundIndex + 1}: OUTSIDE THE TOP 10";
+
+        if (r.runComplete)
+        {
+            string rank = r.runRank > 0 ? $"   RANK #{r.runRank}" : "   OUTSIDE THE TOP 10";
+            runLabel.text = $"FINAL TOTAL {r.runTotal}{rank}";
+            runLabel.style.color = Gold;
+        }
+        else
+        {
+            runLabel.text = $"RUN TOTAL {r.runTotal}";
+            runLabel.style.color = Cyan;
+        }
+
+        string board = BoardText($"ROUND {r.roundIndex + 1} TOP 5", r.teamSize, r.roundIndex);
+        if (r.runComplete) board += "\n\n" + BoardText("FINAL TOP 5", r.teamSize, LeaderboardStore.TotalBoard);
+        boardLabel.text = board;
+        hintLabel.text = round.IsLastRound ? "R: replay round      N: new run" : "R: replay round      N: next round";
+    }
+
+    private string BoardText(string title, int teamSize, int boardIndex)
+    {
+        string text = title;
+        IReadOnlyList<LeaderboardStore.Entry> top = round.Leaderboard.GetTop(teamSize, boardIndex);
+        for (int i = 0; i < top.Count && i < 5; i++)
+        {
+            text += $"\n{i + 1}.  {top[i].score}";
+        }
+        return text;
     }
 
     private void OnBanked(GlimmerAgent agent)

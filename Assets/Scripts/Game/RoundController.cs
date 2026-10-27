@@ -16,6 +16,11 @@ public struct RoundResult
     public float elapsed;
     public ScoreBreakdown score;
     public int rank;
+    public int roundCount;
+    public int runTotal;
+    public float runElapsed;
+    public bool runComplete;
+    public int runRank;
 }
 
 public class RoundController : MonoBehaviour
@@ -45,6 +50,9 @@ public class RoundController : MonoBehaviour
     private ScoreBreakdown liveScore;
     private RoundResult result;
     private LeaderboardStore leaderboard;
+    private int[] runScores = new int[0];
+    private float[] runElapsed = new float[0];
+    private bool[] runPlayed = new bool[0];
     private readonly HashSet<GlimmerAgent> banked = new HashSet<GlimmerAgent>();
     private GUIStyle style;
     private GUIStyle countdownStyle;
@@ -57,6 +65,8 @@ public class RoundController : MonoBehaviour
     public RoundPhase Phase => phase;
     public RoundDefinition CurrentRound => round;
     public int RoundNumber => roundIndex + 1;
+    public int RoundCount => rounds.Count;
+    public bool IsLastRound => roundIndex == rounds.Count - 1;
     public int TeamSize => teamSize;
     public float RoundDuration => roundDuration;
     public float SealWindow => sealWindow;
@@ -98,6 +108,7 @@ public class RoundController : MonoBehaviour
     public void StartRound()
     {
         round = rounds[roundIndex];
+        if (roundIndex == 0 || runScores.Length != rounds.Count) ResetRun();
         currentTeam = teamConfig.Get(teamSize);
 
         swarm.Clear();
@@ -115,6 +126,13 @@ public class RoundController : MonoBehaviour
         sealedTimer = 0f;
         introTimeLeft = introDuration;
         SetPhase(RoundPhase.Intro);
+    }
+
+    private void ResetRun()
+    {
+        runScores = new int[rounds.Count];
+        runElapsed = new float[rounds.Count];
+        runPlayed = new bool[rounds.Count];
     }
 
     private void BeginHerd()
@@ -196,7 +214,21 @@ public class RoundController : MonoBehaviour
     private void EndRound(int total)
     {
         ScoreBreakdown breakdown = scoreService.Evaluate(swarm.Agents, pen, gate.AllFilled, timeLeft > 0f, Mathf.FloorToInt(timeLeft), Mathf.RoundToInt(roundDuration));
-        int rank = leaderboard.Submit(teamSize, breakdown.total, elapsed);
+        int rank = leaderboard.Submit(teamSize, roundIndex, breakdown.total, elapsed);
+
+        runScores[roundIndex] = breakdown.total;
+        runElapsed[roundIndex] = elapsed;
+        runPlayed[roundIndex] = true;
+        int runTotal = 0;
+        float runTime = 0f;
+        bool runComplete = true;
+        for (int i = 0; i < runScores.Length; i++)
+        {
+            runTotal += runScores[i];
+            runTime += runElapsed[i];
+            if (!runPlayed[i]) runComplete = false;
+        }
+        int runRank = runComplete ? leaderboard.Submit(teamSize, LeaderboardStore.TotalBoard, runTotal, runTime) : 0;
 
         liveScore = breakdown;
         result = new RoundResult
@@ -209,7 +241,12 @@ public class RoundController : MonoBehaviour
             timeLeft = timeLeft,
             elapsed = elapsed,
             score = breakdown,
-            rank = rank
+            rank = rank,
+            roundCount = rounds.Count,
+            runTotal = runTotal,
+            runElapsed = runTime,
+            runComplete = runComplete,
+            runRank = runRank
         };
         SetPhase(RoundPhase.Result);
         RoundEnded?.Invoke(result);
@@ -252,12 +289,15 @@ public class RoundController : MonoBehaviour
             text += $"\nAll in: {(s.allIn ? "yes" : "no")}, gate sealed: {(result.gateSealed ? "yes" : "no")} (seal needs a closed gate, sweep needs everything in)";
             text += result.rank > 0 ? $"\nRank: #{result.rank}" : "\nRank: outside the top 10";
 
-            IReadOnlyList<LeaderboardStore.Entry> top = leaderboard.GetTop(teamSize);
+            text += result.runComplete ? $"\nFinal total: {result.runTotal}" : $"\nRun total so far: {result.runTotal}";
+            if (result.runComplete) text += result.runRank > 0 ? $"  (final rank #{result.runRank})" : "  (outside the final top 10)";
+
+            IReadOnlyList<LeaderboardStore.Entry> top = leaderboard.GetTop(teamSize, roundIndex);
             for (int i = 0; i < top.Count && i < 5; i++)
             {
                 text += $"\n  {i + 1}. {top[i].score}  ({top[i].elapsed:F0}s)";
             }
-            text += "\nR: replay   N: next round";
+            text += IsLastRound ? "\nR: replay round   N: new run" : "\nR: replay round   N: next round";
         }
 
         GUI.Label(new Rect(16f, 12f, 1000f, 700f), text, style);

@@ -17,6 +17,7 @@ public class LeaderboardStore
     public class Board
     {
         public int teamSize;
+        public int roundIndex;
         public List<Entry> entries = new List<Entry>();
     }
 
@@ -26,6 +27,7 @@ public class LeaderboardStore
         public List<Board> boards = new List<Board>();
     }
 
+    public const int TotalBoard = -1;
     private const int MaxEntries = 10;
 
     private readonly string path;
@@ -39,15 +41,15 @@ public class LeaderboardStore
         Load();
     }
 
-    public IReadOnlyList<Entry> GetTop(int teamSize)
+    public IReadOnlyList<Entry> GetTop(int teamSize, int roundIndex)
     {
-        Board board = FindBoard(teamSize, false);
+        Board board = FindBoard(teamSize, roundIndex, false);
         return board != null ? board.entries : new List<Entry>();
     }
 
-    public int Submit(int teamSize, int score, float elapsed)
+    public int Submit(int teamSize, int roundIndex, int score, float elapsed)
     {
-        Board board = FindBoard(teamSize, true);
+        Board board = FindBoard(teamSize, roundIndex, true);
         Entry entry = new Entry { score = score, elapsed = elapsed, date = DateTime.Now.ToString("yyyy-MM-dd HH:mm") };
         board.entries.Add(entry);
         board.entries.Sort(Compare);
@@ -71,15 +73,15 @@ public class LeaderboardStore
         return byScore != 0 ? byScore : a.elapsed.CompareTo(b.elapsed);
     }
 
-    private Board FindBoard(int teamSize, bool create)
+    private Board FindBoard(int teamSize, int roundIndex, bool create)
     {
         for (int i = 0; i < data.boards.Count; i++)
         {
-            if (data.boards[i].teamSize == teamSize) return data.boards[i];
+            if (data.boards[i].teamSize == teamSize && data.boards[i].roundIndex == roundIndex) return data.boards[i];
         }
 
         if (!create) return null;
-        Board board = new Board { teamSize = teamSize };
+        Board board = new Board { teamSize = teamSize, roundIndex = roundIndex };
         data.boards.Add(board);
         return board;
     }
