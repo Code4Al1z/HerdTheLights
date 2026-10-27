@@ -22,6 +22,7 @@ public class PenZone : MonoBehaviour
     private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
     private IGateState gate;
+    private bool wallsBuilt;
 
     public Vector3 Center => transform.position;
     public Vector2 Size => size;
@@ -33,7 +34,14 @@ public class PenZone : MonoBehaviour
 
     private void Start()
     {
+        wallsBuilt = true;
         BuildWalls();
+    }
+
+    public void SetGateWidth(float width)
+    {
+        gateWidth = Mathf.Max(0.5f, width);
+        if (wallsBuilt) RebuildWalls();
     }
 
     public void AttachGate(IGateState state)
@@ -118,6 +126,15 @@ public class PenZone : MonoBehaviour
         if (gapX < gapZ) result.x = Center.x + (relative.x < 0f ? -outer.x : outer.x);
         else result.z = Center.z + (relative.z < 0f ? -outer.y : outer.y);
         return result;
+    }
+
+    private void RebuildWalls()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            Destroy(transform.GetChild(i).gameObject);
+        }
+        BuildWalls();
     }
 
     private void BuildWalls()

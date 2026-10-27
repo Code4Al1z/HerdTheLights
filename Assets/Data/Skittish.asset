@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Skittish
   m_EditorClassIdentifier: Assembly-CSharp::ArchetypeDefinition
   <DisplayName>k__BackingField: Skittish
-  <Multiplier>k__BackingField: 2
+  <Multiplier>k__BackingField: 6
   <Color>k__BackingField: {r: 0.9843137, g: 0.003921569, b: 0.8745098, a: 1}
   <EmissionIntensity>k__BackingField: 2
   <Scale>k__BackingField: 0.5
@@ -24,6 +24,7 @@ MonoBehaviour:
   <MaxSpeed>k__BackingField: 5
   <Acceleration>k__BackingField: 14
   <CruiseSpeed>k__BackingField: 1.2
+  <LureSpeed>k__BackingField: 3
   <NeighborRadius>k__BackingField: 4
   <SeparationRadius>k__BackingField: 0.8
   <CohesionWeight>k__BackingField: 0.5

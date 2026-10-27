@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Obedient
   m_EditorClassIdentifier: Assembly-CSharp::ArchetypeDefinition
   <DisplayName>k__BackingField: Obedient
-  <Multiplier>k__BackingField: 1
+  <Multiplier>k__BackingField: 3
   <Color>k__BackingField: {r: 0.5254902, g: 0.27450982, b: 0.99607843, a: 1}
   <EmissionIntensity>k__BackingField: 2
   <Scale>k__BackingField: 0.5
@@ -24,6 +24,7 @@ MonoBehaviour:
   <MaxSpeed>k__BackingField: 3.5
   <Acceleration>k__BackingField: 8
   <CruiseSpeed>k__BackingField: 1
+  <LureSpeed>k__BackingField: 3
   <NeighborRadius>k__BackingField: 4
   <SeparationRadius>k__BackingField: 0.8
   <CohesionWeight>k__BackingField: 0.8

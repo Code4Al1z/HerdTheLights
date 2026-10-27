@@ -13,17 +13,18 @@ MonoBehaviour:
   m_Name: Rebel
   m_EditorClassIdentifier: Assembly-CSharp::ArchetypeDefinition
   <DisplayName>k__BackingField: Rebel
-  <Multiplier>k__BackingField: 3
+  <Multiplier>k__BackingField: 9
   <Color>k__BackingField: {r: 1, g: 0.972549, b: 0.12156863, a: 1}
   <EmissionIntensity>k__BackingField: 2
   <Scale>k__BackingField: 0.5
   <Mesh>k__BackingField: {fileID: 0}
-  <FleeRadius>k__BackingField: 2.5
-  <FleeStrength>k__BackingField: 0.6
+  <FleeRadius>k__BackingField: 3
+  <FleeStrength>k__BackingField: 0.9
   <FleeSpeed>k__BackingField: 3
   <MaxSpeed>k__BackingField: 3.5
   <Acceleration>k__BackingField: 6
   <CruiseSpeed>k__BackingField: 1.2
+  <LureSpeed>k__BackingField: 5
   <NeighborRadius>k__BackingField: 3
   <SeparationRadius>k__BackingField: 0.8
   <CohesionWeight>k__BackingField: 0.2

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c6764db6ad73584b93420fa5f35dcb1, type: 3}
+  m_Name: Round2
+  m_EditorClassIdentifier: Assembly-CSharp::RoundDefinition
+  <DisplayName>k__BackingField: Nerves
+  <RoundDuration>k__BackingField: 70
+  <SealWindow>k__BackingField: 20
+  <GateSpacingMultiplier>k__BackingField: 1
+  mix:
+  - archetype: {fileID: 11400000, guid: 01bc9bffba3b2724586be3b2c50c8d26, type: 2}
+    share: 0.6
+  - archetype: {fileID: 11400000, guid: 8b4b1ab4e0991a74290a8ee383dc500d, type: 2}
+    share: 0.4

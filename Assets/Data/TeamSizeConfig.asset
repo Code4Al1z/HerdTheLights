@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33f06716c485f224bb7b1a4801e4b9f8, type: 3}
+  m_Name: TeamSizeConfig
+  m_EditorClassIdentifier: Assembly-CSharp::TeamSizeConfig
+  entries:
+  - teamSize: 1
+    glimmerCount: 10
+    slotCount: 1
+    slotSpacing: 2
+  - teamSize: 2
+    glimmerCount: 12
+    slotCount: 2
+    slotSpacing: 1.5
+  - teamSize: 3
+    glimmerCount: 16
+    slotCount: 3
+    slotSpacing: 1.3
+  - teamSize: 4
+    glimmerCount: 20
+    slotCount: 4
+    slotSpacing: 1.2
+  - teamSize: 5
+    glimmerCount: 25
+    slotCount: 5
+    slotSpacing: 1.1
+  - teamSize: 6
+    glimmerCount: 30
+    slotCount: 6
+    slotSpacing: 1

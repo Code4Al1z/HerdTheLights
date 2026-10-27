@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -6,11 +7,15 @@ public enum RoundPhase { Ready, Herd, Seal, Result }
 
 public struct RoundResult
 {
+    public int teamSize;
+    public int roundIndex;
     public int glimmersTotal;
     public int glimmersInPen;
     public bool gateSealed;
     public float timeLeft;
     public float elapsed;
+    public ScoreBreakdown score;
+    public int rank;
 }
 
 public class RoundController : MonoBehaviour
@@ -18,15 +23,22 @@ public class RoundController : MonoBehaviour
     [SerializeField] private PenZone pen;
     [SerializeField] private GateSlots gate;
     [SerializeField] private SwarmSpawner swarm;
-    [SerializeField] private float roundDuration = 70f;
-    [SerializeField] private float sealWindow = 20f;
+    [SerializeField] private ScoreService scoreService;
+    [SerializeField] private TeamSizeConfig teamConfig;
+    [SerializeField] private List<RoundDefinition> rounds = new List<RoundDefinition>();
+    [SerializeField] private int teamSize = 1;
     [SerializeField] private bool autoStart = true;
     [SerializeField] private bool showDebug = true;
 
     private RoundPhase phase = RoundPhase.Ready;
+    private RoundDefinition round;
+    private int roundIndex;
+    private float roundDuration;
+    private float sealWindow;
     private float timeLeft;
     private float elapsed;
     private RoundResult result;
+    private LeaderboardStore leaderboard;
     private GUIStyle style;
 
     public event Action<RoundPhase> PhaseChanged;
@@ -36,12 +48,21 @@ public class RoundController : MonoBehaviour
     public float TimeLeft => timeLeft;
     public float SealWindow => sealWindow;
     public RoundResult Result => result;
+    public int TeamSize => teamSize;
+    public LeaderboardStore Leaderboard => leaderboard;
+
+    private void Awake()
+    {
+        leaderboard = new LeaderboardStore();
+        Debug.Log($"Leaderboard file: {leaderboard.Path}");
+    }
 
     private void Start()
     {
-        if (pen == null || gate == null || swarm == null)
+        bool missing = pen == null || gate == null || swarm == null || scoreService == null || teamConfig == null;
+        if (missing || rounds.Count == 0 || rounds[0] == null)
         {
-            Debug.LogError("RoundController needs a pen, a gate and a swarm spawner.", this);
+            Debug.LogError("RoundController needs a pen, gate, swarm, score service, team size config and at least one round.", this);
             enabled = false;
             return;
         }
@@ -49,10 +70,23 @@ public class RoundController : MonoBehaviour
         if (autoStart) StartRound();
     }
 
+    public void SetTeamSize(int size)
+    {
+        teamSize = Mathf.Max(1, size);
+    }
+
     public void StartRound()
     {
-        swarm.Spawn();
+        round = rounds[roundIndex];
+        TeamSizeConfig.Entry team = teamConfig.Get(teamSize);
+
+        pen.SetGateWidth(team.slotCount * team.slotSpacing * round.GateSpacingMultiplier);
+        gate.SetSlotCount(team.slotCount);
         gate.SetArmed(false);
+        swarm.Spawn(round.BuildSpawnList(team.glimmerCount));
+
+        roundDuration = round.RoundDuration;
+        sealWindow = round.SealWindow;
         timeLeft = roundDuration;
         elapsed = 0f;
         SetPhase(RoundPhase.Herd);
@@ -63,7 +97,14 @@ public class RoundController : MonoBehaviour
         if (phase == RoundPhase.Result)
         {
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.rKey.wasPressedThisFrame) StartRound();
+            if (keyboard == null) return;
+
+            if (keyboard.rKey.wasPressedThisFrame) StartRound();
+            if (keyboard.nKey.wasPressedThisFrame)
+            {
+                roundIndex = (roundIndex + 1) % rounds.Count;
+                StartRound();
+            }
             return;
         }
 
@@ -89,13 +130,20 @@ public class RoundController : MonoBehaviour
 
     private void EndRound(int total)
     {
+        ScoreBreakdown breakdown = scoreService.Evaluate(swarm.Agents, pen, gate.AllFilled, timeLeft, roundDuration);
+        int rank = leaderboard.Submit(teamSize, breakdown.total, elapsed);
+
         result = new RoundResult
         {
+            teamSize = teamSize,
+            roundIndex = roundIndex,
             glimmersTotal = total,
             glimmersInPen = pen.CountInside(swarm.Agents),
             gateSealed = gate.AllFilled,
             timeLeft = timeLeft,
-            elapsed = elapsed
+            elapsed = elapsed,
+            score = breakdown,
+            rank = rank
         };
         SetPhase(RoundPhase.Result);
         RoundEnded?.Invoke(result);
@@ -109,18 +157,29 @@ public class RoundController : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!showDebug || swarm == null || pen == null || gate == null) return;
+        if (!showDebug || swarm == null || pen == null || gate == null || round == null) return;
         if (style == null) style = new GUIStyle(GUI.skin.label) { fontSize = 22 };
 
-        string text = $"Phase: {phase}\nTime left: {timeLeft:F1}s\nIn pen: {pen.CountInside(swarm.Agents)} / {swarm.Agents.Count}\nSlots filled: {gate.FilledCount} / {gate.SlotCount}";
+        string text = $"Round {roundIndex + 1}: {round.DisplayName} (team of {teamSize})\nPhase: {phase}\nTime left: {timeLeft:F1}s\nIn pen: {pen.CountInside(swarm.Agents)} / {swarm.Agents.Count}\nSlots filled: {gate.FilledCount} / {gate.SlotCount}";
 
         LureController lure = swarm.Lure;
         if (lure != null)
             text += lure.Ready ? "\nLure: ready" : $"\nLure: {lure.CooldownRemaining:F1}s";
 
         if (phase == RoundPhase.Result)
-            text += $"\nResult: {result.glimmersInPen} / {result.glimmersTotal} in pen, sealed: {(result.gateSealed ? "yes" : "no")}, {result.timeLeft:F1}s left\nPress R to restart";
+        {
+            ScoreBreakdown s = result.score;
+            text += $"\nScore: {s.total} (grade {s.grade}) = {s.basePoints} + seal {s.sealBonus} + time {s.timeBonus}";
+            text += result.rank > 0 ? $"\nRank: #{result.rank}" : "\nRank: outside the top 10";
 
-        GUI.Label(new Rect(16f, 12f, 1000f, 320f), text, style);
+            IReadOnlyList<LeaderboardStore.Entry> top = leaderboard.GetTop(teamSize);
+            for (int i = 0; i < top.Count && i < 5; i++)
+            {
+                text += $"\n  {i + 1}. {top[i].score}  ({top[i].elapsed:F0}s)";
+            }
+            text += "\nR: replay   N: next round";
+        }
+
+        GUI.Label(new Rect(16f, 12f, 1000f, 640f), text, style);
     }
 }

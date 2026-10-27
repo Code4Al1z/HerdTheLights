@@ -1,16 +1,8 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class SwarmSpawner : MonoBehaviour
 {
-    [Serializable]
-    public struct SpawnEntry
-    {
-        public ArchetypeDefinition archetype;
-        public int count;
-    }
-
     [SerializeField] private GlimmerAgent glimmerPrefab;
     [SerializeField] private PlayfieldMapper mapper;
     [SerializeField] private MonoBehaviour playerSourceBehaviour;

@@ -334,8 +334,13 @@ MonoBehaviour:
   pen: {fileID: 733720856}
   gate: {fileID: 1973811494}
   swarm: {fileID: 511393628}
-  roundDuration: 70
-  sealWindow: 20
+  scoreService: {fileID: 781451093}
+  teamConfig: {fileID: 11400000, guid: 1ba0e52943351fd4fa206e1f894d45ea, type: 2}
+  rounds:
+  - {fileID: 11400000, guid: e930474d61ee7244f971ba8c07cacf61, type: 2}
+  - {fileID: 11400000, guid: 2758e0c5800df014ca3c239328c2b699, type: 2}
+  - {fileID: 11400000, guid: a1452c32d34272f45b78d82b5b3f0c54, type: 2}
+  teamSize: 1
   autoStart: 1
   showDebug: 1
 --- !u!4 &359264515
@@ -601,7 +606,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: a889e15a5a95dd54cb912d61e938ec8b, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -682,7 +687,7 @@ MonoBehaviour:
   gateWidth: 3
   wallMaterial: {fileID: 2100000, guid: 05dce3b6ab592f440a7e97ea9e4229fc, type: 2}
   wallColor: {r: 0.014517871, g: 0.97735846, b: 0, a: 1}
-  wallThickness: 0.15
+  wallThickness: 0.2
   wallEmission: 2
 --- !u!4 &733720857
 Transform:
@@ -691,6 +696,57 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 733720855}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -6, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &781451092
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 781451094}
+  - component: {fileID: 781451093}
+  m_Layer: 0
+  m_Name: Score
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &781451093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 781451092}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57267e29f74d447448a685f4a2dfa268, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScoreService
+  sealBonusFraction: 0.2
+  timeBonusPerSecond: 1
+  parTimeFraction: 0.25
+  gradeS: 0.95
+  gradeA: 0.8
+  gradeB: 0.6
+  gradeC: 0.4
+--- !u!4 &781451094
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 781451092}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -6, y: 0, z: 0}
@@ -881,7 +937,7 @@ MonoBehaviour:
   slotCount: 1
   standDepth: 1.2
   markerPrefab: {fileID: 2398609962721333033, guid: 506963ace54d7044a930ac67cf3e7ad3, type: 3}
-  markerScale: 1.5
+  markerFill: 0.9
   idleColor: {r: 0.5, g: 0.5, b: 0.6, a: 1}
   emptyColor: {r: 1, g: 0.45, b: 0.1, a: 1}
   filledColor: {r: 0.2, g: 1, b: 0.5, a: 1}
@@ -916,3 +972,4 @@ SceneRoots:
   - {fileID: 1973811495}
   - {fileID: 931334582}
   - {fileID: 359264515}
+  - {fileID: 781451094}
