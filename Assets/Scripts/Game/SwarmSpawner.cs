@@ -8,11 +8,9 @@ public class SwarmSpawner : MonoBehaviour
     [SerializeField] private MonoBehaviour playerSourceBehaviour;
     [SerializeField] private PenZone pen;
     [SerializeField] private LureController lure;
-    [SerializeField] private List<SpawnEntry> entries = new List<SpawnEntry>();
     [SerializeField] private int maxSwarm = 40;
     [SerializeField] private float spawnMargin = 2f;
     [SerializeField] private float penClearance = 1f;
-    [SerializeField] private bool spawnOnStart = true;
 
     private readonly List<GlimmerAgent> agents = new List<GlimmerAgent>();
 
@@ -20,22 +18,12 @@ public class SwarmSpawner : MonoBehaviour
     public PenZone Pen => pen;
     public LureController Lure => lure;
 
-    private void Start()
-    {
-        if (spawnOnStart) Spawn();
-    }
-
-    public void Spawn()
-    {
-        Spawn(entries);
-    }
-
     public void Spawn(IReadOnlyList<SpawnEntry> list)
     {
         Clear();
         if (glimmerPrefab == null || mapper == null)
         {
-            Debug.LogWarning("SwarmSpawner needs a glimmer prefab and a playfield mapper.");
+            Debug.LogWarning("SwarmSpawner needs a glimmer prefab and a playfield mapper.", this);
             return;
         }
 
@@ -75,9 +63,9 @@ public class SwarmSpawner : MonoBehaviour
         for (int attempt = 0; attempt < 20; attempt++)
         {
             point = mapper.Center + new Vector3(
-                UnityEngine.Random.Range(-half.x, half.x),
+                Random.Range(-half.x, half.x),
                 0f,
-                UnityEngine.Random.Range(-half.y, half.y));
+                Random.Range(-half.y, half.y));
             if (pen == null || !pen.Contains(point, penClearance)) break;
         }
         return point;
