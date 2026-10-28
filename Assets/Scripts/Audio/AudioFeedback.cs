@@ -60,7 +60,9 @@ public class AudioFeedback : MonoBehaviour
     private bool wasLure;
     private bool ready;
 
-    private void Start()
+    private bool HasMusic => musicBase != null || musicDrive != null || musicTension != null;
+
+    private void Awake()
     {
         if (round == null)
         {
@@ -108,10 +110,11 @@ public class AudioFeedback : MonoBehaviour
 
     private void UpdateMusic(RoundPhase phase)
     {
-        if (!musicRunning) return;
-
         bool playing = phase == RoundPhase.Herd || phase == RoundPhase.Seal;
         bool active = playing || phase == RoundPhase.Intro;
+        if (active && !musicRunning && HasMusic) StartMusic();
+        if (!musicRunning) return;
+
         float fill = round.GlimmersTotal > 0 ? (float)round.GlimmersInPen / round.GlimmersTotal : 0f;
 
         float[] targets =
@@ -238,7 +241,7 @@ public class AudioFeedback : MonoBehaviour
             music[i].volume = 0f;
             if (music[i].clip != null) music[i].PlayScheduled(musicStart);
         }
-        musicRunning = musicBase != null || musicDrive != null || musicTension != null;
+        musicRunning = HasMusic;
     }
 
     private void StopMusic()
