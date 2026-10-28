@@ -1150,7 +1150,7 @@ MonoBehaviour:
   runsPerConfig: 6
   firstRound: 2
   timeScale: 10
-  runOnStart: 1
+  runOnStart: 0
 --- !u!114 &1899365461
 MonoBehaviour:
   m_ObjectHideFlags: 0

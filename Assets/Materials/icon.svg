@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="46%" r="78%">
+      <stop offset="0" stop-color="#12365a"/>
+      <stop offset="0.6" stop-color="#08162a"/>
+      <stop offset="1" stop-color="#040a14"/>
+    </radialGradient>
+    <radialGradient id="cyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#9af0ff"/>
+      <stop offset="1" stop-color="#2fd0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="amber" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#ffd37a"/>
+      <stop offset="1" stop-color="#ff9a1f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="magenta" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#ff9be6"/>
+      <stop offset="1" stop-color="#e032b8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" filterUnits="userSpaceOnUse" x="-200" y="-200" width="1500" height="1500">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="haze" filterUnits="userSpaceOnUse" x="-200" y="-200" width="1500" height="1500">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g transform="translate(512 512) scale(1.06) translate(-630 -515)">
+  <ellipse cx="560" cy="520" rx="300" ry="330" fill="#1fb7e8" opacity="0.16" filter="url(#haze)"/>
+  <path d="M742 420 V322 a42 42 0 0 0 -42 -42 H342 a42 42 0 0 0 -42 42 V706 a42 42 0 0 0 42 42 H700 a42 42 0 0 0 42 -42 V604"
+        fill="none" stroke="#6fe8ff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <circle cx="742" cy="420" r="20" fill="#ffb347" filter="url(#glow)"/>
+  <circle cx="742" cy="604" r="20" fill="#ffb347" filter="url(#glow)"/>
+  <g>
+    <circle cx="410" cy="395" r="66" fill="url(#cyan)"/>
+    <circle cx="545" cy="355" r="58" fill="url(#cyan)"/>
+    <circle cx="640" cy="440" r="62" fill="url(#cyan)"/>
+    <circle cx="430" cy="630" r="60" fill="url(#cyan)"/>
+    <circle cx="500" cy="500" r="58" fill="url(#amber)"/>
+    <circle cx="655" cy="560" r="54" fill="url(#amber)"/>
+    <circle cx="570" cy="650" r="82" fill="url(#magenta)"/>
+    <circle cx="850" cy="450" r="56" fill="url(#cyan)"/>
+    <circle cx="905" cy="590" r="52" fill="url(#amber)"/>
+    <circle cx="820" cy="650" r="46" fill="url(#cyan)"/>
+  </g>
+  <g fill="none" stroke="#9af0ff" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 22" opacity="0.7">
+    <path d="M905 590 Q830 540 760 512"/>
+    <path d="M850 450 Q805 470 760 500"/>
+    <path d="M820 650 Q790 590 760 525"/>
+  </g>
+  </g>
+</svg>
