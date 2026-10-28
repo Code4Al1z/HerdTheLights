@@ -34,7 +34,7 @@ public class RoundController : MonoBehaviour
     [SerializeField] private int teamSize = 1;
     [SerializeField] private float introDuration = 3f;
     [SerializeField] private float commitHold = 3f;
-    [SerializeField] private bool autoStart = true;
+    [SerializeField] private bool startOnPlay;
     [SerializeField] private bool showDebug = true;
 
     private RoundPhase phase = RoundPhase.Ready;
@@ -98,7 +98,7 @@ public class RoundController : MonoBehaviour
             return;
         }
 
-        if (autoStart) StartRound();
+        if (startOnPlay) StartRound();
     }
 
     public bool IsBanked(GlimmerAgent agent)
@@ -109,6 +109,23 @@ public class RoundController : MonoBehaviour
     public void SetTeamSize(int size)
     {
         teamSize = Mathf.Max(1, size);
+    }
+
+    public bool RecordScores { get; set; } = true;
+
+    public void ShowMenu()
+    {
+        swarm.Clear();
+        banked.Clear();
+        gate.SetArmed(false);
+        liveScore = new ScoreBreakdown();
+        SetPhase(RoundPhase.Ready);
+    }
+
+    public void StartRound(int index)
+    {
+        roundIndex = Mathf.Clamp(index, 0, rounds.Count - 1);
+        StartRound();
     }
 
     public void StartRound()
@@ -154,6 +171,11 @@ public class RoundController : MonoBehaviour
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
+            if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                ShowMenu();
+                return;
+            }
             if (keyboard.rKey.wasPressedThisFrame) StartRound();
             if (keyboard.nKey.wasPressedThisFrame)
             {
@@ -220,7 +242,7 @@ public class RoundController : MonoBehaviour
     private void EndRound(int total)
     {
         ScoreBreakdown breakdown = scoreService.Evaluate(swarm.Agents, pen, gate.AllFilled, timeLeft > 0f, Mathf.FloorToInt(timeLeft), Mathf.RoundToInt(roundDuration));
-        int rank = leaderboard.Submit(teamSize, roundIndex, breakdown.total, elapsed);
+        int rank = RecordScores ? leaderboard.Submit(teamSize, roundIndex, breakdown.total, elapsed) : 0;
 
         runScores[roundIndex] = breakdown.total;
         runElapsed[roundIndex] = elapsed;
@@ -234,7 +256,7 @@ public class RoundController : MonoBehaviour
             runTime += runElapsed[i];
             if (!runPlayed[i]) runComplete = false;
         }
-        int runRank = runComplete ? leaderboard.Submit(teamSize, LeaderboardStore.TotalBoard, runTotal, runTime) : 0;
+        int runRank = runComplete && RecordScores ? leaderboard.Submit(teamSize, LeaderboardStore.TotalBoard, runTotal, runTime) : 0;
 
         liveScore = breakdown;
         result = new RoundResult

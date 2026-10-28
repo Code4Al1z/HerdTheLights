@@ -256,7 +256,7 @@ public class HudController : MonoBehaviour
         string board = BoardText($"ROUND {r.roundIndex + 1} TOP 5", r.teamSize, r.roundIndex);
         if (r.runComplete) board += "\n\n" + BoardText("FINAL TOP 5", r.teamSize, LeaderboardStore.TotalBoard);
         boardLabel.text = board;
-        hintLabel.text = round.IsLastRound ? "R: replay round      N: new run" : "R: replay round      N: next round";
+        hintLabel.text = round.IsLastRound ? "R: replay round      N: new run      Esc: menu" : "R: replay round      N: next round      Esc: menu";
     }
 
     private string BoardText(string title, int teamSize, int boardIndex)
