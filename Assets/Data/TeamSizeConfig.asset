@@ -22,18 +22,18 @@ MonoBehaviour:
     slotCount: 2
     slotSpacing: 1.5
   - teamSize: 3
-    glimmerCount: 16
+    glimmerCount: 15
     slotCount: 3
     slotSpacing: 1.3
   - teamSize: 4
-    glimmerCount: 20
+    glimmerCount: 18
     slotCount: 4
     slotSpacing: 1.2
   - teamSize: 5
-    glimmerCount: 25
+    glimmerCount: 21
     slotCount: 5
     slotSpacing: 1.1
   - teamSize: 6
-    glimmerCount: 30
+    glimmerCount: 24
     slotCount: 6
     slotSpacing: 1

@@ -10,31 +10,54 @@ public class BotTeam : MonoBehaviour
     [SerializeField] private PenZone pen;
     [SerializeField] private GateSlots gate;
     [SerializeField] private PlayfieldMapper mapper;
+    [SerializeField] private LureController lure;
     [SerializeField] private Material dotMaterial;
     [SerializeField] private float dotScale = 0.6f;
     [SerializeField] private float moveSpeed = 4.5f;
-    [SerializeField] private float wobble = 0.15f;
+    [SerializeField] private float wobble = 0.1f;
     [SerializeField] private float retargetInterval = 0.5f;
-    [SerializeField] private float sealLead = 10f;
+    [SerializeField] private float commitBuffer = 1f;
+    [SerializeField] private int maxPerGlimmer = 3;
     [SerializeField, Range(0.2f, 1f)] private float pushFraction = 0.6f;
+    [SerializeField, Range(0f, 2f)] private float headingCorrection = 0.8f;
     [SerializeField] private float penMargin = 0.8f;
     [SerializeField] private float patience = 6f;
     [SerializeField] private float requiredProgress = 1f;
     [SerializeField] private float blacklistTime = 5f;
+    [SerializeField, Range(0.3f, 1f)] private float avoidFraction = 0.9f;
+    [SerializeField] private float avoidWeight = 2.5f;
+    [SerializeField] private float botSpacing = 2f;
+    [SerializeField] private float laneWidth = 1.6f;
+    [SerializeField, Range(0.1f, 1f)] private float creepSpeed = 0.35f;
+    [SerializeField] private bool useLure = true;
+    [SerializeField] private int lureMinGlimmers = 2;
 
     private class Bot
     {
         public Transform dot;
         public Vector3 position;
         public Vector3 goal;
+        public Vector3 aim;
         public GlimmerAgent target;
+        public float flank;
         public float targetTime;
         public float targetStartDistance;
     }
 
+    private struct Lane
+    {
+        public Vector3 from;
+        public Vector3 to;
+        public int owner;
+        public GlimmerAgent target;
+    }
+
     private readonly List<Bot> bots = new List<Bot>();
+    private readonly List<Lane> lanes = new List<Lane>();
     private readonly HashSet<GlimmerAgent> taken = new HashSet<GlimmerAgent>();
     private readonly Dictionary<GlimmerAgent, float> blacklist = new Dictionary<GlimmerAgent, float>();
+    private readonly Dictionary<GlimmerAgent, int> helpers = new Dictionary<GlimmerAgent, int>();
+    private bool timeCommit;
     private bool humanPresent;
     private Vector3 humanWorld;
     private float retargetTimer;
@@ -85,6 +108,8 @@ public class BotTeam : MonoBehaviour
 
         EnsureBots();
         blacklist.Clear();
+        lanes.Clear();
+        timeCommit = false;
         for (int i = 0; i < bots.Count; i++)
         {
             bots[i].position = StartPosition(i);
@@ -111,9 +136,11 @@ public class BotTeam : MonoBehaviour
             }
         }
 
-        bool commit = playing && ShouldCommit();
+        bool commit = playing && ShouldCommit(active);
+        BuildLanes(active, playing && !commit);
         if (commit) SetSlotGoals(active);
         else SetHerdGoals(active, playing);
+        if (playing && !commit) TryLure();
 
         for (int i = 0; i < bots.Count; i++)
         {
@@ -121,19 +148,100 @@ public class BotTeam : MonoBehaviour
             bots[i].dot.gameObject.SetActive(on);
             if (!on) continue;
 
-            Vector3 noise = new Vector3(
-                Mathf.PerlinNoise(Time.time * 0.8f, i * 7.1f) - 0.5f,
-                0f,
-                Mathf.PerlinNoise(i * 3.3f, Time.time * 0.8f) - 0.5f) * 2f * wobble;
-            Vector3 goal = mapper.Clamp(bots[i].goal + noise, 0.3f);
-            Step(bots[i], goal, commit);
+            Vector3 goal = bots[i].goal;
+            Vector3 delta;
+            if (commit)
+            {
+                delta = Vector3.MoveTowards(bots[i].position, mapper.Clamp(goal, 0.3f), moveSpeed * Time.deltaTime) - bots[i].position;
+            }
+            else
+            {
+                Vector3 noise = new Vector3(
+                    Mathf.PerlinNoise(Time.time * 0.8f, i * 7.1f) - 0.5f,
+                    0f,
+                    Mathf.PerlinNoise(i * 3.3f, Time.time * 0.8f) - 0.5f) * 2f * wobble;
+                goal = mapper.Clamp(goal + noise, 0.3f);
+                delta = SteeredDelta(bots[i], i, goal, active);
+            }
+
+            Step(bots[i], delta, goal, commit);
             bots[i].dot.position = bots[i].position;
         }
     }
 
-    private void Step(Bot bot, Vector3 goal, bool allowGate)
+    private Vector3 SteeredDelta(Bot bot, int index, Vector3 goal, int active)
     {
-        Vector3 next = Vector3.MoveTowards(bot.position, goal, moveSpeed * Time.deltaTime);
+        Vector3 toGoal = goal - bot.position;
+        toGoal.y = 0f;
+        float distance = toGoal.magnitude;
+        Vector3 desired = distance > 0.001f ? toGoal / distance * Mathf.Clamp01(distance / 0.6f) : Vector3.zero;
+        Vector3 steer = Vector3.zero;
+        float slow = 1f;
+
+        bool inFront = false;
+        if (bot.target != null)
+        {
+            Vector3 toAim = bot.aim - bot.target.transform.position;
+            toAim.y = 0f;
+            Vector3 fromTarget = bot.position - bot.target.transform.position;
+            fromTarget.y = 0f;
+            inFront = Vector3.Dot(fromTarget, toAim) > 0f;
+        }
+
+        IReadOnlyList<GlimmerAgent> agents = round.Agents;
+        for (int a = 0; agents != null && a < agents.Count; a++)
+        {
+            GlimmerAgent agent = agents[a];
+            if (agent == null || agent.Archetype == null || round.IsBanked(agent)) continue;
+            if (agent == bot.target && !inFront) continue;
+
+            Vector3 away = bot.position - agent.transform.position;
+            away.y = 0f;
+            float d = away.magnitude;
+            float radius = agent.Archetype.FleeRadius * avoidFraction + 0.3f;
+            if (d >= radius || d < 0.001f) continue;
+
+            float strength = (radius - d) / radius;
+            away /= d;
+            Vector3 swirl = new Vector3(-away.z, 0f, away.x);
+            if (Vector3.Dot(swirl, desired) < 0f) swirl = -swirl;
+            steer += (away + swirl) * strength * avoidWeight;
+            slow = Mathf.Min(slow, Mathf.Lerp(creepSpeed, 1f, d / radius));
+        }
+
+        for (int j = 0; j < active && j < bots.Count; j++)
+        {
+            if (j == index) continue;
+
+            Vector3 away = bot.position - bots[j].position;
+            away.y = 0f;
+            float d = away.magnitude;
+            if (d >= botSpacing || d < 0.001f) continue;
+
+            steer += away / d * ((botSpacing - d) / botSpacing) * avoidWeight;
+        }
+
+        for (int l = 0; l < lanes.Count; l++)
+        {
+            if (lanes[l].owner == index || (bot.target != null && lanes[l].target == bot.target)) continue;
+
+            Vector3 closest = ClosestOnSegment(lanes[l].from, lanes[l].to, bot.position);
+            Vector3 away = bot.position - closest;
+            away.y = 0f;
+            float d = away.magnitude;
+            if (d >= laneWidth || d < 0.001f) continue;
+
+            steer += away / d * ((laneWidth - d) / laneWidth) * avoidWeight * 1.5f;
+        }
+
+        Vector3 velocity = desired + steer;
+        if (velocity.magnitude > 1f) velocity.Normalize();
+        return velocity * moveSpeed * slow * Time.deltaTime;
+    }
+
+    private void Step(Bot bot, Vector3 delta, Vector3 goal, bool allowGate)
+    {
+        Vector3 next = mapper.Clamp(bot.position + delta, 0.3f);
         next.y = mapper.Center.y;
 
         if (!allowGate && !pen.Contains(bot.position, penMargin) && pen.Contains(next, penMargin))
@@ -151,11 +259,22 @@ public class BotTeam : MonoBehaviour
         bot.position = next;
     }
 
-    private bool ShouldCommit()
+    private bool ShouldCommit(int active)
     {
         int total = round.GlimmersTotal;
         bool allIn = total > 0 && round.GlimmersInPen == total;
-        return allIn || round.TimeLeft <= sealLead;
+        if (allIn || timeCommit) return true;
+
+        float travel = 0f;
+        for (int i = 0; i < active && i < bots.Count; i++)
+        {
+            travel = Mathf.Max(travel, (bots[i].position - pen.GateCenter).magnitude / moveSpeed);
+        }
+
+        if (round.TimeLeft > round.CommitHold + commitBuffer + travel) return false;
+
+        timeCommit = true;
+        return true;
     }
 
     private bool IsValidTarget(GlimmerAgent agent)
@@ -216,24 +335,97 @@ public class BotTeam : MonoBehaviour
             if (bot.target != null) continue;
 
             GlimmerAgent best = null;
-            float bestDistance = float.MaxValue;
+            float bestCost = float.MaxValue;
             for (int a = 0; a < agents.Count; a++)
             {
                 GlimmerAgent agent = agents[a];
                 if (!IsValidTarget(agent) || taken.Contains(agent)) continue;
 
-                float distance = (agent.transform.position - bot.position).sqrMagnitude;
-                if (distance >= bestDistance) continue;
+                float cost = (agent.transform.position - bot.position).magnitude;
+                for (int l = 0; l < lanes.Count; l++)
+                {
+                    if (lanes[l].owner == i) continue;
+                    Vector3 closest = ClosestOnSegment(lanes[l].from, lanes[l].to, agent.transform.position);
+                    if ((closest - agent.transform.position).magnitude < laneWidth) cost += 8f;
+                }
+                if (cost >= bestCost) continue;
                 best = agent;
-                bestDistance = distance;
+                bestCost = cost;
             }
 
             if (best == null) continue;
             taken.Add(best);
             bot.target = best;
+            bot.flank = 0f;
             bot.targetTime = Time.time;
             bot.targetStartDistance = DistanceToGate(best);
         }
+
+        helpers.Clear();
+        for (int i = 0; i < active && i < bots.Count; i++)
+        {
+            if (bots[i].target == null) continue;
+            helpers.TryGetValue(bots[i].target, out int count);
+            helpers[bots[i].target] = count + 1;
+        }
+
+        for (int i = 0; i < active && i < bots.Count; i++)
+        {
+            Bot bot = bots[i];
+            if (bot.target != null) continue;
+
+            GlimmerAgent helped = null;
+            float helpedCost = float.MaxValue;
+            for (int a = 0; a < agents.Count; a++)
+            {
+                GlimmerAgent agent = agents[a];
+                if (!IsValidTarget(agent)) continue;
+
+                helpers.TryGetValue(agent, out int crowd);
+                if (crowd >= maxPerGlimmer) continue;
+
+                float cost = (agent.transform.position - bot.position).magnitude * 0.5f - DistanceToGate(agent) + crowd * 5f;
+                if (cost >= helpedCost) continue;
+                helped = agent;
+                helpedCost = cost;
+            }
+
+            if (helped == null) continue;
+            helpers.TryGetValue(helped, out int existing);
+            helpers[helped] = existing + 1;
+            bot.target = helped;
+            bot.flank = FlankAngle(existing);
+            bot.targetTime = Time.time;
+            bot.targetStartDistance = DistanceToGate(helped);
+        }
+    }
+
+    private static float FlankAngle(int existing)
+    {
+        if (existing <= 0) return 0f;
+        return (existing % 2 == 1 ? 1f : -1f) * 35f * ((existing + 1) / 2);
+    }
+
+    private void BuildLanes(int active, bool herding)
+    {
+        lanes.Clear();
+        for (int i = 0; i < active && i < bots.Count; i++)
+        {
+            Bot bot = bots[i];
+            if (!herding || !IsValidTarget(bot.target)) continue;
+
+            bot.aim = AimPoint(bot.target.transform.position);
+            lanes.Add(new Lane { from = bot.target.transform.position, to = bot.aim, owner = i, target = bot.target });
+        }
+    }
+
+    private Vector3 AimPoint(Vector3 position)
+    {
+        Vector3 relative = position - pen.GateCenter;
+        float along = Vector3.Dot(relative, pen.GateAxis);
+        float depth = Vector3.Dot(relative, pen.GateOutward);
+        bool inFunnel = depth > 0.2f && Mathf.Abs(along) <= pen.GateLength * 0.6f + depth * 0.5f;
+        return inFunnel ? pen.GateCenter - pen.GateOutward * 1.5f : pen.GateCenter + pen.GateOutward * 3.5f;
     }
 
     private void SetHerdGoals(int active, bool playing)
@@ -248,22 +440,28 @@ public class BotTeam : MonoBehaviour
                 continue;
             }
 
-            bot.goal = PushGoal(target, bot.position);
+            bot.goal = ShiftOutOfLanes(PushGoal(target, bot), i, target);
         }
     }
 
-    private Vector3 PushGoal(GlimmerAgent target, Vector3 botPosition)
+    private Vector3 PushGoal(GlimmerAgent target, Bot bot)
     {
         Vector3 position = target.transform.position;
-        Vector3 relative = position - pen.GateCenter;
-        float along = Vector3.Dot(relative, pen.GateAxis);
-        float depth = Vector3.Dot(relative, pen.GateOutward);
-        bool inFunnel = depth > 0.2f && Mathf.Abs(along) <= pen.GateLength * 0.6f + depth * 0.5f;
-        Vector3 aim = inFunnel ? pen.GateCenter - pen.GateOutward * 1.5f : pen.GateCenter + pen.GateOutward * 3.5f;
-
-        Vector3 direction = aim - position;
+        Vector3 direction = bot.aim - position;
         direction.y = 0f;
         direction = direction.sqrMagnitude < 0.01f ? -pen.GateOutward : direction.normalized;
+
+        Vector3 velocity = target.Velocity;
+        velocity.y = 0f;
+        if (velocity.sqrMagnitude > 0.09f)
+        {
+            Vector3 heading = velocity.normalized;
+            Vector3 error = heading - direction * Vector3.Dot(heading, direction);
+            Vector3 corrected = direction - error * headingCorrection;
+            if (corrected.sqrMagnitude > 0.01f) direction = corrected.normalized;
+        }
+
+        direction = Quaternion.AngleAxis(bot.flank, Vector3.up) * direction;
 
         float push = Mathf.Max(0.8f, target.Archetype.FleeRadius * pushFraction);
         Vector3 behind = position - direction * push;
@@ -274,15 +472,75 @@ public class BotTeam : MonoBehaviour
         Vector3 right = position - side * push;
         bool leftOk = !OffMap(left);
         bool rightOk = !OffMap(right);
-        if (leftOk && rightOk) return (left - botPosition).sqrMagnitude <= (right - botPosition).sqrMagnitude ? left : right;
+        if (leftOk && rightOk) return (left - bot.position).sqrMagnitude <= (right - bot.position).sqrMagnitude ? left : right;
         if (leftOk) return left;
         if (rightOk) return right;
         return behind;
     }
 
+    private Vector3 ShiftOutOfLanes(Vector3 goal, int index, GlimmerAgent target)
+    {
+        for (int l = 0; l < lanes.Count; l++)
+        {
+            if (lanes[l].owner == index || lanes[l].target == target) continue;
+
+            Vector3 closest = ClosestOnSegment(lanes[l].from, lanes[l].to, goal);
+            Vector3 offset = goal - closest;
+            offset.y = 0f;
+            float d = offset.magnitude;
+            if (d >= laneWidth) continue;
+
+            Vector3 lane = lanes[l].to - lanes[l].from;
+            Vector3 direction = d > 0.01f ? offset / d : new Vector3(-lane.z, 0f, lane.x).normalized;
+            goal = closest + direction * laneWidth;
+        }
+        return goal;
+    }
+
+    private static Vector3 ClosestOnSegment(Vector3 a, Vector3 b, Vector3 point)
+    {
+        Vector3 ab = b - a;
+        float length = ab.sqrMagnitude;
+        if (length < 0.0001f) return a;
+
+        float t = Mathf.Clamp01(Vector3.Dot(point - a, ab) / length);
+        return a + ab * t;
+    }
+
     private bool OffMap(Vector3 point)
     {
         return (mapper.Clamp(point, 0.3f) - point).sqrMagnitude > 0.09f;
+    }
+
+    private void TryLure()
+    {
+        if (!useLure || lure == null || humanPresent || !lure.Ready) return;
+
+        IReadOnlyList<GlimmerAgent> agents = round.Agents;
+        if (agents == null) return;
+
+        Vector3 inside = pen.GateCenter - pen.GateOutward * 1.5f;
+        Vector3 mouth = pen.GateCenter + pen.GateOutward * 3f;
+        int nearInside = 0;
+        int nearMouth = 0;
+        for (int a = 0; a < agents.Count; a++)
+        {
+            GlimmerAgent agent = agents[a];
+            if (agent == null || agent.Archetype == null || round.IsBanked(agent)) continue;
+
+            Vector3 position = agent.transform.position;
+            float depth = Vector3.Dot(position - pen.GateCenter, pen.GateOutward);
+            if (depth > 0.2f && (position - inside).magnitude <= lure.Radius) nearInside++;
+            if ((position - mouth).magnitude <= lure.Radius) nearMouth++;
+        }
+
+        Vector3 point;
+        if (nearInside >= lureMinGlimmers) point = inside;
+        else if (nearMouth >= lureMinGlimmers + 1) point = mouth;
+        else return;
+
+        Vector2 n = mapper.WorldToNormalized(point);
+        lure.TryDrop(new Vector2(Mathf.Clamp01(n.x), Mathf.Clamp01(n.y)));
     }
 
     private void SetSlotGoals(int active)

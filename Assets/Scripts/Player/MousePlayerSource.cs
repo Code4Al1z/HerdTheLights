@@ -10,6 +10,14 @@ public class MousePlayerSource : MonoBehaviour, IPlayerSource
 
     private Vector2 normalized = new Vector2(0.5f, 0.5f);
 
+    public bool IncludeHuman => includeHuman;
+
+    public void SetIncludeHuman(bool value)
+    {
+        includeHuman = value;
+        if (bots != null && mapper != null) bots.SetHuman(includeHuman, mapper.NormalizedToWorld(normalized));
+    }
+
     public int Count => (includeHuman ? 1 : 0) + (bots != null ? bots.Count : 0);
 
     public Vector2 GetNormalizedPosition(int index)
