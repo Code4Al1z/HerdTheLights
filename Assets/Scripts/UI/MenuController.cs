@@ -21,6 +21,7 @@ public class MenuController : MonoBehaviour
     private readonly List<Button> teamButtons = new List<Button>();
     private VisualElement root;
     private Label teamLabel;
+    private Button windowButton;
     private int selected = 1;
     private float shownAt;
     private bool wasVisible;
@@ -47,14 +48,17 @@ public class MenuController : MonoBehaviour
     {
         if (!ready) return;
 
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null && keyboard.f11Key.wasPressedThisFrame) ToggleFullscreen();
+
         bool visible = round.Phase == RoundPhase.Ready;
         root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         if (visible && !wasVisible) shownAt = Time.unscaledTime;
         wasVisible = visible;
-        if (!visible || Time.unscaledTime - shownAt < 0.3f) return;
+        if (!visible) return;
 
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
+        windowButton.text = Screen.fullScreen ? "SWITCH TO WINDOW  (F11)" : "SWITCH TO FULLSCREEN  (F11)";
+        if (Time.unscaledTime - shownAt < 0.3f || keyboard == null) return;
 
         for (int n = minTeam; n <= maxTeam; n++)
         {
@@ -76,6 +80,18 @@ public class MenuController : MonoBehaviour
     {
         round.SetTeamSize(selected);
         round.StartRound(0);
+    }
+
+    private static void ToggleFullscreen()
+    {
+        if (Screen.fullScreen)
+        {
+            Screen.SetResolution(1280, 720, FullScreenMode.Windowed);
+            return;
+        }
+
+        Resolution display = Screen.currentResolution;
+        Screen.SetResolution(display.width, display.height, FullScreenMode.FullScreenWindow);
     }
 
     private static void Quit()
@@ -163,13 +179,24 @@ public class MenuController : MonoBehaviour
         Radius(start, 20);
         root.Add(start);
 
+        windowButton = new Button(ToggleFullscreen);
+        windowButton.style.width = 420;
+        windowButton.style.height = 56;
+        windowButton.style.fontSize = 24;
+        windowButton.style.marginTop = 22;
+        windowButton.style.backgroundColor = new Color(1f, 1f, 1f, 0.06f);
+        windowButton.style.color = Color.white;
+        Border(windowButton, 2, Cyan);
+        Radius(windowButton, 14);
+        root.Add(windowButton);
+
         Label how = MakeLabel(root, 26, Muted, false);
         how.text = "Move the mouse to herd. Left click drops a lure.\nWhen the seal phase starts, stand in your gate slot to close the gate.";
-        how.style.marginTop = 50;
+        how.style.marginTop = 40;
         how.style.unityTextAlign = TextAnchor.MiddleCenter;
 
         Label keys = MakeLabel(root, 22, new Color(0.55f, 0.65f, 0.7f), false);
-        keys.text = "1-6 or arrow keys: players      Enter: start      Esc: quit";
+        keys.text = "1-6 or arrow keys: players      Enter: start      F11: window      Esc: quit";
         keys.style.marginTop = 24;
     }
 
