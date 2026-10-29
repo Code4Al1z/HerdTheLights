@@ -1030,8 +1030,8 @@ MonoBehaviour:
   pen: {fileID: 733720856}
   gate: {fileID: 1973811494}
   mapper: {fileID: 1208170991}
-  lure: {fileID: 0}
-  dotMaterial: {fileID: 0}
+  lure: {fileID: 931334581}
+  dotMaterial: {fileID: 2100000, guid: 7b6a1fbcf66de9a44b2ea0c0b51885c6, type: 2}
   dotScale: 0.6
   moveSpeed: 4.5
   wobble: 0.15
